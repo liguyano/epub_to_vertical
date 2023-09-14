@@ -7,4 +7,5 @@ INCLUDE_DIRECTORIES("D:\\OneDrive - jxstnu.edu.cn\\c++\\socket\\socket_include")
 add_executable(epubToRight main.cpp
         "${SELFHEAD}Logger.cpp"
 unzip.cpp
+        ${SELFHEAD}MyFile.cpp
 )
