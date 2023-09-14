@@ -11,6 +11,7 @@
 #include <fstream>
 #include <exception>
 #include "tinyxml/tinyxml.h"
+#include <MyVectors.h>
 SNSTART("EPUB")
 using namespace String;
 const static std::string makeItVertical="   \twriting-mode: vertical-rl;\n"
@@ -98,13 +99,6 @@ int changCofFile()
     cofFile->SaveFile();
     cofFile->Clear();
 }
-std::vector<std::string> removeDuplicates(const std::vector<std::string>& inputVec) {
-    std::vector<std::string> resultVec = inputVec;
-    std::sort(resultVec.begin(), resultVec.end());
-    auto it = std::unique(resultVec.begin(), resultVec.end());
-    resultVec.erase(it, resultVec.end());
-    return resultVec;
-}
 stringVe getAllClasses()
 {stringVe allClasses;
     auto fs= GetFilesInFolder(filePath+"temp/");
@@ -135,12 +129,6 @@ stringVe getAllClasses()
 
     }
     return allClasses;
-}
-
-template <typename T>
-bool containsElement(const std::vector<T>& vec, const T& target) {
-    auto it = std::find(vec.begin(), vec.end(), target);
-    return it != vec.end();
 }
 void changeHtmlFile()
 {
@@ -211,7 +199,6 @@ void saveEpubFile(std::string outFIleName)
     copyFile("temp.zip",outFIleName.c_str());
     remove("temp.zip");
 }
-
 int main() {
     try {
        // system("chcp 65001");
