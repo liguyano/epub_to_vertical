@@ -1,18 +1,17 @@
-#include <iostream>
+#include <Windows.h>
 #include <Logger.h>
-#include "windows.h"
+#include <MyFile.h>
+SNSTART("form_epub")
+#include <iostream>
 #include "unzip.h"
 #include "zip.h"
 #include <cstdio>
 #include "MYString.h"
 #include <self_made.h>
-#include <encoding.h>
-#include <MyFile.h>
 #include <fstream>
 #include <exception>
 #include "tinyxml/tinyxml.h"
 #include <MyVectors.h>
-SNSTART("EPUB")
 using namespace String;
 const static std::string makeItVertical="   \twriting-mode: vertical-rl;\n"
                                         "\t-webkit-writing-mode: vertical-rl;\n"
@@ -179,7 +178,9 @@ void changeHtmlFile()
         }while (! cssFile.eof());//while
         ldebug(outString);
         std::ofstream outcss;
-        outcss.open("_temp.css",std::ios::out);
+        outcss.open("_temp.css",std::ios::out);auto a="\xe3\x80\x8d";
+     /*   outString=replaceAllOccurrences(outString,std::string("“"),std::string("\xe3\x80\x8c"));
+        outString=replaceAllOccurrences(outString,"”","\xa1\xb9");*/
         outcss<<outString;
         outcss.close();
         copyFile("_temp.css",s.c_str());
@@ -214,63 +215,91 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
     saveEpubFile(filePath+"vertical_"+fileName);
     linfo("end");
 }
-int main() {
-    try {
-       // system("chcp 65001");
-        //system("\"D:\\Program` Files\\Calibre2\\ebook-convert.exe\" ");
+HWND hwndCheckbox1, hwndCheckbox2, hwndCheckbox3, hwndButton,hwndInput,hwndButton2;
 
-        std::string filePaths;
-        OpenFileSelectionDialog(filePaths);
-        filePaths=Encoding::GbkToUtf8(filePaths.c_str());
-        auto wh=getExtensionAfterLastDot(filePaths);
-        if (wh=="azw3"|| wh=="mobi")
-        {auto str=getExtensionBeforLastDot(filePaths);
-            linfo(str);
-            system(("\'D:\\Program Files\\Calibre2\\ebook-convert.exe\' "+filePaths+"\" \""+str+".epub\"").c_str());
-            linfo(("\"D:\\Program Files\\Calibre2\\ebook-convert.exe\" "+filePaths+"\" \""+str+".epub\"").c_str())
-            filePaths=str+".epub";
-        }
-        if (filePaths.size()<1)
-        {
-            throw "no file selected";
-        }
-        linfo("open "+filePaths);
-        auto sv=String::split(filePaths,"\\");
-        filePaths="";
-        std::string fileName;
-        if (sv.size()>1)
-        {
-            for (int i = 0; i < sv.size()-1; ++i) {
-                auto s=sv[i];
-                filePaths+=s+"/";
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_CREATE: {
+            // 创建输入框
+            hwndInput = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL, 10, 10, 150, 30, hwnd, NULL, NULL, NULL);
 
-            } fileName=sv[sv.size()-1];
-        }else
-        {
-            sv=String::split(filePaths,"/");
-            for (int i = 0; i < sv.size()-1; ++i) {
-                auto s=sv[i];
-                filePaths+=s+"/";
+            // 创建按钮
+            hwndButton2 = CreateWindow("BUTTON", "...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 170, 10, 80, 30, hwnd, (HMENU)1, NULL, NULL);
+
+            // 创建三个复选框和一个按钮
+            hwndCheckbox1 = CreateWindow("BUTTON", "\xcc\xe6\xbb\xbb\xb1\xea\xb5\xe3\xb7\xfb\xba\xc5", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 40, 150, 30, hwnd, NULL, NULL, NULL);
+            hwndCheckbox2 = CreateWindow("BUTTON", "\xcc\xe6\xbb\xbb\xbc\xf2\xb7\xb1\xcc\xe5", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 80, 150, 30, hwnd, NULL, NULL, NULL);
+            hwndCheckbox3 = CreateWindow("BUTTON", "Checkbox 3", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 120, 150, 30, hwnd, NULL, NULL, NULL);
+            hwndButton = CreateWindow("BUTTON", "\xbf\xaa\xca\xbc\xd7\xaa\xbb\xbb", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 160, 150, 30, hwnd, (HMENU)2, NULL, NULL);
+
+            break;
+        }
+        case WM_COMMAND: {
+            // 处理按钮点击事件
+            if (LOWORD(wParam) == (WORD)hwndButton) {
+                MessageBox(hwnd, "Button clicked!", "Message", MB_OK | MB_ICONINFORMATION);
             }
-            fileName=sv[sv.size()-1];
+            if (HIWORD(wParam) == BN_CLICKED)
+            {
+
+                if (HWND(wParam)==HWND(1))
+                {
+                    std::string path;
+                    OpenFileSelectionDialog(path);
+                    SetWindowText(hwndInput, "");
+                    SetWindowText(hwndInput, path.c_str());
+                    ninfo("which: ");std::cout<<HWND(wParam) END;
+                }else  if (HWND(wParam)==HWND(2))
+                {       int textLength = GetWindowTextLength(hwndInput);
+
+                    char *buffer = (char *)malloc(textLength + 1);
+
+                    GetWindowText(hwndInput, buffer, textLength + 1);
+                    linfo(buffer);
+
+                    free(buffer);
+                    StartCOnvert(buffer,1,1);
+                    ninfo("which: ");std::cout<<HWND(wParam) END;
+                }
+            }
+
+                break;
         }
-        linfo(filePaths);
-        linfo("unzip "+filePaths+fileName);
-        filePath=filePaths;
-        unzipFile(filePaths+fileName);
-        linfo("change the spine");
-        changCofFile();
-        linfo("add rtl succed");
-        linfo("chang html FIle");
-        changeHtmlFile();
-        linfo("merge to a new epub file");
-        saveEpubFile(filePath+"vertical_"+fileName);
-        linfo("end");
-    }   catch (const std::exception& e) {
-        lerror(e.what());
-        MessageBox(NULL, e.what(), "ERROR", MB_OK | MB_ICONINFORMATION);
-        return -1;
+        case WM_CLOSE: {
+            DestroyWindow(hwnd);
+            break;
+        }
+        case WM_DESTROY: {
+            PostQuitMessage(0);
+            break;
+        }
+        default:
+            return DefWindowProc(hwnd, msg, wParam, lParam);
     }
-   
+    return 0;
+}
+
+int main() {
+    // 注册窗口类
+    WNDCLASS wc = { 0 };
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance =GetModuleHandle(NULL);
+    wc.lpszClassName = "MyWindowClass";
+    RegisterClass(&wc);
+
+    // 创建主窗口
+    HWND hwnd = CreateWindow("MyWindowClass", "Window with Controls", WS_OVERLAPPEDWINDOW, 100, 100, 300, 250, NULL, NULL, GetModuleHandle(NULL), NULL);
+
+    // 显示主窗口
+    ShowWindow(hwnd, SW_SHOWDEFAULT);
+    UpdateWindow(hwnd);
+
+    // 消息循环
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
     return 0;
 }

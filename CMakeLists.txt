@@ -10,4 +10,9 @@ add_executable(epubToRight main.cpp
 unzip.cpp zip.cpp
         ${SELFHEAD}MyFile.cpp
 )
+add_executable( FORM form.cpp
+        "${SELFHEAD}Logger.cpp"
+        ${SELFHEAD}MyFile.cpp
+        unzip.cpp zip.cpp)
 target_link_libraries(epubToRight xmlt)
+target_link_libraries(FORM xmlt)
