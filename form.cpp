@@ -19,6 +19,7 @@ const static std::string makeItVertical="   \twriting-mode: vertical-rl;\n"
 
 const static std::string rtolString="page-progression-direction=\"rtl\"";
 static std::string filePath="";
+static int changeChar,changeComplex=0;
 //unzip in the dir now , then copy it to the direction
 int unzipFile(std::string fileName,std::string outPutPath="temp")
 {
@@ -28,7 +29,7 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
         ZIPENTRY ze;
         GetZipItem(hz, -1, &ze);
         int numitems = ze.index;
-        ldebug(std::to_string(numitems));
+        ldebug("ze.index:%d",numitems);
         createFolderIfNotExists(outPutPath);
         for (int i = 0; i < numitems; i++) {
             GetZipItem(hz, i, &ze);
@@ -77,7 +78,7 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
         return 1;
     }
     catch (const std::exception& e) {
-        lerror(e.what());
+        lerror("%s",e.what());
         return 0;
     }
 }
@@ -87,7 +88,7 @@ int changCofFile()
     cofFile->LoadFile((filePath+"/temp/content.opf").c_str(),TIXML_ENCODING_UTF8);
     if (cofFile->Error())
     {
-        lerror(cofFile->ErrorDesc());
+        lerror("%s",cofFile->ErrorDesc());
         return -1;
     }
     auto Package=cofFile->FirstChildElement();
@@ -98,8 +99,38 @@ int changCofFile()
     cofFile->SaveFile();
     cofFile->Clear();
 }
+void changeHtmlChar(std::string fileName) {
+    std::ifstream htmlFile;
+    htmlFile.open(fileName, std::ios::in);
+    std::string line;
+    std::getline(htmlFile, line);
+    std::ofstream outHtmlFile;
+
+    outHtmlFile.open("./__temp.html", std::ios::out);
+    ldebug("file name :%s", fileName.c_str());
+    while (std::getline(htmlFile, line)) {
+
+        if (changeChar) {
+            line = replaceAllOccurrences(line, "\xe2\x80\x9c", "\xe3\x80\x8c");
+            line = replaceAllOccurrences(line, "\xe2\x80\x9d", "\xe3\x80\x8d");
+        }
+        outHtmlFile << line END;
+    }
+    if (changeComplex)
+    {   std::ofstream pyFile;
+        pyFile.open("toComplex.py",std::ios::out);
+        pyFile<<"import sys\nimport zhconv\nif len(sys.argv) > 1:\n    outHtml=\"\"\n    with open(\"__temp.html\" ,encoding=\"utf-8\") as htmlFile:\n        for line in htmlFile:\n            line=zhconv.convert(line, 'zh-tw')\n            outHtml+=line+\"\\n\"\n    file=open(\"__temp.html\",\'w\',encoding=\"utf-8\")\n    file.write(outHtml)\nelse:\n    print(\"\xe6\x9c\xaa\xe6\x8f\x90\xe4\xbe\x9b\xe5\x91\xbd\xe4\xbb\xa4\xe8\xa1\x8c\xe5\x8f\x82\xe6\x95\xb0\")";    // 注册窗口类
+        pyFile.close();
+        system("py toComplex.py __temp.html");
+    }
+    copyFile("__temp.html",fileName.c_str());
+    htmlFile.close();
+    outHtmlFile.close();
+    remove("./__temp.html");
+}
 stringVe getAllClasses()
-{stringVe allClasses;
+{
+    stringVe allClasses;
     auto fs= GetFilesInFolder(filePath+"temp/");
     for (auto s:fs) {
         auto pres=String::split(s,".");
@@ -107,10 +138,11 @@ stringVe getAllClasses()
         {
             ldebug(s);
             auto htmlFile=new TiXmlDocument;
-            htmlFile->LoadFile((filePath+"temp/"+s).c_str(),TIXML_ENCODING_UTF8);
+            htmlFile->LoadFile((filePath+"temp\\"+s).c_str(),TIXML_ENCODING_UTF8);
+            changeHtmlChar(filePath+"temp\\"+s);
             if (htmlFile->Error())
             {
-                lerror(htmlFile->ErrorDesc());
+                lerror("%s",htmlFile->ErrorDesc());
                 throw "erro";
             }
             auto html=htmlFile->FirstChildElement();
@@ -179,8 +211,6 @@ void changeHtmlFile()
         ldebug(outString);
         std::ofstream outcss;
         outcss.open("_temp.css",std::ios::out);auto a="\xe3\x80\x8d";
-     /*   outString=replaceAllOccurrences(outString,std::string("“"),std::string("\xe3\x80\x8c"));
-        outString=replaceAllOccurrences(outString,"”","\xa1\xb9");*/
         outcss<<outString;
         outcss.close();
         copyFile("_temp.css",s.c_str());
@@ -230,7 +260,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             hwndCheckbox1 = CreateWindow("BUTTON", "\xcc\xe6\xbb\xbb\xb1\xea\xb5\xe3\xb7\xfb\xba\xc5", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 40, 150, 30, hwnd, NULL, NULL, NULL);
             hwndCheckbox2 = CreateWindow("BUTTON", "\xcc\xe6\xbb\xbb\xbc\xf2\xb7\xb1\xcc\xe5", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 80, 150, 30, hwnd, NULL, NULL, NULL);
             hwndCheckbox3 = CreateWindow("BUTTON", "Checkbox 3", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 120, 150, 30, hwnd, NULL, NULL, NULL);
-            hwndButton = CreateWindow("BUTTON", "\xbf\xaa\xca\xbc\xd7\xaa\xbb\xbb", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 160, 150, 30, hwnd, (HMENU)2, NULL, NULL);
+           /*start change button id:2*/
+           hwndButton = CreateWindow("BUTTON", "\xbf\xaa\xca\xbc\xd7\xaa\xbb\xbb", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 160, 150, 30, hwnd, (HMENU)2, NULL, NULL);
 
             break;
         }
@@ -242,24 +273,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (HIWORD(wParam) == BN_CLICKED)
             {
 
-                if (HWND(wParam)==HWND(1))
+                if (HWND(wParam)==HWND(1))//file select button
                 {
                     std::string path;
                     OpenFileSelectionDialog(path);
                     SetWindowText(hwndInput, "");
                     SetWindowText(hwndInput, path.c_str());
-                    ninfo("which: ");std::cout<<HWND(wParam) END;
-                }else  if (HWND(wParam)==HWND(2))
+                    info_f("button: %d",HWND(wParam));
+                }else  if (HWND(wParam)==HWND(2))/*start change button id:2*/
                 {       int textLength = GetWindowTextLength(hwndInput);
 
                     char *buffer = (char *)malloc(textLength + 1);
 
                     GetWindowText(hwndInput, buffer, textLength + 1);
                     linfo(buffer);
-
+                    changeChar= SendMessage(hwndCheckbox1, BM_GETCHECK, 0, 0);
+                    changeComplex= SendMessage(hwndCheckbox2, BM_GETCHECK, 0, 0);
+                    ldebug("ischecked:%d",changeChar);
                     free(buffer);
                     StartCOnvert(buffer,1,1);
-                    ninfo("which: ");std::cout<<HWND(wParam) END;
+                    linfo("which :%d",HWND(wParam)) ;
                 }
             }
 
@@ -280,7 +313,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 int main() {
-    // 注册窗口类
+    system("chcp 65001");
+    std::ofstream pyFile;
+    pyFile.open("toComplex.py",std::ios::out);
+    pyFile<<"import sys\nimport zhconv\nif len(sys.argv) > 1:\n    outHtml=\"\"\n    with open(\"__temp.html\" ,encoding=\"utf-8\") as htmlFile:\n        for line in htmlFile:\n            line=zhconv.convert(line, 'zh-tw')\n            outHtml+=line+\"\\n\"\n    file=open(\"__temp.html\",\'w\',encoding=\"utf-8\")\n    file.write(outHtml)\nelse:\n    print(\"\xe6\x9c\xaa\xe6\x8f\x90\xe4\xbe\x9b\xe5\x91\xbd\xe4\xbb\xa4\xe8\xa1\x8c\xe5\x8f\x82\xe6\x95\xb0\")";    // 注册窗口类
+    pyFile.close();
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = WndProc;
     wc.hInstance =GetModuleHandle(NULL);
@@ -300,6 +337,6 @@ int main() {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-
+    remove("toComplex.py");
     return 0;
 }
