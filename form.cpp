@@ -12,6 +12,8 @@ SNSTART("form_epub")
 #include <exception>
 #include "tinyxml/tinyxml.h"
 #include <MyVectors.h>
+#include <encoding.h>
+
 using namespace String;
 const static std::string makeItVertical="   writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;";
 
@@ -116,9 +118,8 @@ void changeHtmlChar(std::string fileName) {
     std::ofstream outHtmlFile;
 
     outHtmlFile.open("./__temp.html", std::ios::out);
-    ldebug("file name :%s", fileName.c_str());
+    linfo("to complex file name :%s", fileName.c_str());
     while (std::getline(htmlFile, line)) {
-
         if (changeChar) {
             line = replaceAllOccurrences(line, "\xe2\x80\x9c", "\xe3\x80\x8c");
             line = replaceAllOccurrences(line, "\xe2\x80\x9d", "\xe3\x80\x8d");
@@ -132,10 +133,16 @@ void changeHtmlChar(std::string fileName) {
         pyFile.close();
         system("py toComplex.py __temp.html");
     }
-    copyFile("__temp.html",fileName.c_str());
+    if (copyFile("__temp.html",fileName.c_str()))
+    {
+        remove("./__temp.html");
+    }else
+    {
+        lerro("copy file %s failed",fileName.c_str());
+    }
     htmlFile.close();
     outHtmlFile.close();
-    remove("./__temp.html");
+
 }
 stringVe getAllClasses()
 {
@@ -143,7 +150,7 @@ stringVe getAllClasses()
     auto fs= GetFilesInFolder(filePath+"temp/");
     for (auto s:fs) {
         auto pres=String::split(s,".");
-        if (pres[pres.size()-1]=="html")
+        if (pres[pres.size()-1].find("htm")!=std::string::npos)
         {
             ldebug(s);
             auto htmlFile=new TiXmlDocument;
@@ -159,7 +166,14 @@ stringVe getAllClasses()
             auto body=html->FirstChildElement("body");
             ldebug(body->Value());
             auto _class=body->Attribute("class");
-            allClasses.push_back(String::split(_class," ")[0]);
+            if (_class==nullptr)
+            {
+                ldebug("no attribute class");
+            }else
+            {
+                allClasses.push_back(String::split(_class," ")[0]);
+            }
+
         }
 
     }
@@ -241,7 +255,7 @@ void saveEpubFile(std::string outFIleName)
 }
 void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
 {
-    linfo("open "+fileName);
+    linfo("open "+Encoding::GbkToUtf8(fileName.c_str()));
     filePath=getExtensionBeforLastDot(fileName,'\\')+"\\";
     fileName=getExtensionAfterLastDot(fileName,'\\');
     unzipFile(filePath+fileName);
@@ -295,12 +309,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     char *buffer = (char *)malloc(textLength + 1);
 
                     GetWindowText(hwndInput, buffer, textLength + 1);
-                    linfo(buffer);
+                    linfo("epub file name %s ",buffer);
                     changeChar= SendMessage(hwndCheckbox1, BM_GETCHECK, 0, 0);
                     changeComplex= SendMessage(hwndCheckbox2, BM_GETCHECK, 0, 0);
                     ldebug("ischecked:%d",changeChar);
-                    free(buffer);
                     StartCOnvert(buffer,1,1);
+                    free(buffer);
                     linfo("which :%d",HWND(wParam)) ;
                 }
             }
