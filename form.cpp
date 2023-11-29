@@ -13,9 +13,7 @@ SNSTART("form_epub")
 #include "tinyxml/tinyxml.h"
 #include <MyVectors.h>
 using namespace String;
-const static std::string makeItVertical="   \twriting-mode: vertical-rl;\n"
-                                        "\t-webkit-writing-mode: vertical-rl;\n"
-                                        "\t-webkit-writing-mode: vertical-rl;";
+const static std::string makeItVertical="   writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;";
 
 const static std::string rtolString="page-progression-direction=\"rtl\"";
 static std::string filePath="";
@@ -84,8 +82,19 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
 }
 int changCofFile()
 {
+    auto files=GetFilesInFolder(filePath);
+    std::string opfFile="";
+    for (auto ff:files)
+    {
+        if (ff.find("content.opf")!=std::string::npos)
+        {
+            linfo("opfFile:%s",ff.c_str());
+            opfFile=ff;
+            break;
+        }
+    }
     auto cofFile =new TiXmlDocument;
-    cofFile->LoadFile((filePath+"/temp/content.opf").c_str(),TIXML_ENCODING_UTF8);
+    cofFile->LoadFile((filePath+"/"+opfFile).c_str(),TIXML_ENCODING_UTF8);
     if (cofFile->Error())
     {
         lerror("%s",cofFile->ErrorDesc());
@@ -175,15 +184,34 @@ void changeHtmlFile()
         }
     }
     for (auto s:allcss) {
-        ldebug(s);
+        linfo("change css file: %s",s.c_str());
         std::ifstream cssFile;
         cssFile.open(s, std::ios::in);
+        if (!cssFile.is_open())
+        {
+            lerror("open file %s failed",s.c_str());
+            return;
+        }
         std::string outString;
         std::string temp = "1";
         bool isClass= false;
         do  {
             temp="";
             cssFile>>temp;
+            for (auto cc: temp) {
+                switch (cc) {
+                    case'{':
+                        outString+=cc;
+                        outString+=makeItVertical;
+                        break;
+                    case '}':
+                        outString+=cc;
+                        outString+='\n';
+                    default:
+                        outString+=cc;
+                        break;
+                }
+            }
             outString+=temp+" ";
             if (temp[0]=='}')
             {
