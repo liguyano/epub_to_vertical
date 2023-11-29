@@ -183,8 +183,9 @@ void changeHtmlFile()
             allcss.push_back(s);
         }
     }
+    int iofCss=1;
     for (auto s:allcss) {
-        linfo("change css file: %s",s.c_str());
+        linfo("change css file: %s %d in %d",s.c_str(),iofCss,allcss.size());
         std::ifstream cssFile;
         cssFile.open(s, std::ios::in);
         if (!cssFile.is_open())
@@ -192,7 +193,7 @@ void changeHtmlFile()
             lerror("open file %s failed",s.c_str());
             return;
         }
-        std::string outString;
+        std::string outString="body{"+makeItVertical+"}\n";
         std::string temp = "1";
         bool isClass= false;
         do  {
@@ -202,46 +203,26 @@ void changeHtmlFile()
                 switch (cc) {
                     case'{':
                         outString+=cc;
-                        outString+=makeItVertical;
                         break;
                     case '}':
                         outString+=cc;
                         outString+='\n';
+                        break;
                     default:
                         outString+=cc;
                         break;
                 }
             }
-            outString+=temp+" ";
-            if (temp[0]=='}')
-            {
-                outString+='\n';
-            }
-            if (temp[0]=='.')
-            {
-                auto className=temp.substr(1,temp.size());
-                ldebug(temp);
-                if (containsElement(allClass,className))
-                {
-                    ldebug("need add;");
-                    isClass= true;
-                }
-            }
-            if (isClass) {
-                if (temp[0] == '{')
-                {
-                    isClass= false;
-                    outString+="\n"+makeItVertical;
-                    ldebug("added");
-                }
-            }
+
         }while (! cssFile.eof());//while
         ldebug(outString);
         std::ofstream outcss;
         outcss.open("_temp.css",std::ios::out);auto a="\xe3\x80\x8d";
         outcss<<outString;
         outcss.close();
-        copyFile("_temp.css",s.c_str());
+        if(copyFile("_temp.css",s.c_str()))
+        {}else
+            lerro("copy file %s failed",s.c_str());
         remove("_temp.css");
     }
 }
