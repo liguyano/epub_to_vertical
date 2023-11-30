@@ -23,5 +23,6 @@ add_executable( FORM form.cpp
         unzip.cpp zip.cpp)
 add_executable(StringTest testy/CHangeStringTest.cpp
         "${SELFHEAD}Logger.cpp")
+add_executable(FormatTest reFormate.cpp "${SELFHEAD}Logger.cpp")
 target_link_libraries(epubToRight xmlt)
 target_link_libraries(FORM xmlt)

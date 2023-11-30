@@ -14,7 +14,7 @@ SNSTART("form_epub")
 #include <MyVectors.h>
 #include <encoding.h>
 #include <CommCtrl.h>
-#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
+//#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
 static int progress =0;
 using namespace String;
 const static std::string makeItVertical="   writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;";
@@ -23,6 +23,11 @@ const static std::string rtolString="page-progression-direction=\"rtl\"";
 static std::string filePath="";
 static int changeChar,changeComplex=0;
 //unzip in the dir now , then copy it to the direction
+void convertBook(std::string fileName,std::string tobe)
+{
+    system(("\"D:\\Program Files\\Calibre2\\ebook-convert.exe\" "+fileName+" "+tobe).c_str());
+    linfo("command""\"D:\\Program Files\\Calibre2\\ebook-convert.exe\" \""+fileName+"\" \""+tobe+"\"" );
+}
 int unzipFile(std::string fileName,std::string outPutPath="temp")
 {
     try {
@@ -86,7 +91,7 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
 }
 int changCofFile()
 {
-    auto files=GetFilesInFolder(filePath);
+    auto files=GetFilesInFolder(filePath+"temp/");
     std::string opfFile="";
     for (auto ff:files)
     {
@@ -262,6 +267,13 @@ void saveEpubFile(std::string outFIleName)
 }
 void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
 {
+    auto name= getExtensionBeforLastDot(getExtensionAfterLastDot(fileName,'\\'));
+    auto prex= getExtensionAfterLastDot(fileName);
+    if (prex!="epub")
+    {
+        convertBook(getExtensionAfterLastDot(fileName,'\\').c_str(),(name+".epub").c_str());
+        fileName=getExtensionBeforLastDot(fileName)+".epub";
+    }
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)progress, 0); // 设置进度条位置
     linfo("open "+Encoding::GbkToUtf8(fileName.c_str()));
     SetWindowText(hwndLabel, getExtensionAfterLastDot(fileName,'\\').c_str()); // 设置标签文本
