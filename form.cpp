@@ -265,12 +265,14 @@ void saveEpubFile(std::string outFIleName)
     copyFile("temp.zip",outFIleName.c_str());
     remove("temp.zip");
 }
+//main
 void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
 {
     auto name= getExtensionBeforLastDot(getExtensionAfterLastDot(fileName,'\\'));
     auto prex= getExtensionAfterLastDot(fileName);
     if (prex!="epub")
     {
+        SetWindowText(hwndLabel, "convert to epub"); // 设置标签文本
         convertBook(getExtensionAfterLastDot(fileName,'\\').c_str(),(name+".epub").c_str());
         fileName=getExtensionBeforLastDot(fileName)+".epub";
     }
@@ -295,6 +297,8 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
     linfo("merge to a new epub file");
     saveEpubFile(filePath+"vertical_"+fileName);
     linfo("end");
+    SetWindowText(hwndLabel,"output a azw3 file");
+    convertBook("vertical_"+fileName, getExtensionBeforLastDot(fileName)+".azw3");
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
 }
 
@@ -349,7 +353,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (HWND(wParam)==HWND(1))//file select button
                 {
                     std::string path;
-                    OpenFileSelectionDialog(path);
+                    OpenFileSelectionDialog(path,"BooK Files\0*.epub;*.txt;*.mobi;*.azw3;\0All Files\0*.*\0");
                     SetWindowText(hwndInput, "");
                     SetWindowText(hwndInput, path.c_str());
                     info_f("button: %d",HWND(wParam));
