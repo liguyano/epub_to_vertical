@@ -13,10 +13,12 @@ SNSTART("form_epub")
 #include "tinyxml/tinyxml.h"
 #include <MyVectors.h>
 #include <encoding.h>
-
+#include <CommCtrl.h>
+#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
+static int progress =0;
 using namespace String;
 const static std::string makeItVertical="   writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;";
-
+HWND hwndCheckbox1, hwndCheckbox2, hwndCheckbox3, hwndButton,hwndInput,hwndButton2,hwndProgress, hwndLabel;
 const static std::string rtolString="page-progression-direction=\"rtl\"";
 static std::string filePath="";
 static int changeChar,changeComplex=0;
@@ -118,7 +120,7 @@ void changeHtmlChar(std::string fileName) {
     std::ofstream outHtmlFile;
 
     outHtmlFile.open("./__temp.html", std::ios::out);
-    linfo("to complex file name :%s", fileName.c_str());
+    ldebug("to complex file name :%s", fileName.c_str());
     while (std::getline(htmlFile, line)) {
         if (changeChar) {
             line = replaceAllOccurrences(line, "\xe2\x80\x9c", "\xe3\x80\x8c");
@@ -148,12 +150,15 @@ stringVe getAllClasses()
 {
     stringVe allClasses;
     auto fs= GetFilesInFolder(filePath+"temp/");
+    int iofs=0;
     for (auto s:fs) {
         auto pres=String::split(s,".");
         if (pres[pres.size()-1].find("htm")!=std::string::npos)
         {
             ldebug(s);
             auto htmlFile=new TiXmlDocument;
+            SetWindowText(hwndLabel,("make complex:"+s).c_str());
+            SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)(iofs++*100/fs.size()), 0); // 设置进度条位置
             htmlFile->LoadFile((filePath+"temp\\"+s).c_str(),TIXML_ENCODING_UTF8);
             changeHtmlChar(filePath+"temp\\"+s);
             if (htmlFile->Error())
@@ -197,8 +202,11 @@ void changeHtmlFile()
         }
     }
     int iofCss=1;
+
     for (auto s:allcss) {
         linfo("change css file: %s %d in %d",s.c_str(),iofCss,allcss.size());
+        SetWindowText(hwndLabel,("change css:"+s).c_str());
+        SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)(iofCss*100/allcss.size()), 0); // 设置进度条位置
         std::ifstream cssFile;
         cssFile.open(s, std::ios::in);
         if (!cssFile.is_open())
@@ -254,20 +262,30 @@ void saveEpubFile(std::string outFIleName)
 }
 void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
 {
+    SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)progress, 0); // 设置进度条位置
     linfo("open "+Encoding::GbkToUtf8(fileName.c_str()));
+    SetWindowText(hwndLabel, getExtensionAfterLastDot(fileName,'\\').c_str()); // 设置标签文本
     filePath=getExtensionBeforLastDot(fileName,'\\')+"\\";
     fileName=getExtensionAfterLastDot(fileName,'\\');
+    SetWindowText(hwndLabel,"unzip epub file");
+    SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)0, 0); // 设置进度条位置
     unzipFile(filePath+fileName);
+    SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
     linfo("change the spine");
-    changCofFile();
+    SetWindowText(hwndLabel,"change .cof file");
+    SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)0, 0); // 设置进度条位置
+    changCofFile();SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
+    progress=45;
     linfo("add rtl succed");
     linfo("chang html FIle");
+    SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)0, 0); // 设置进度条位置
     changeHtmlFile();
     linfo("merge to a new epub file");
     saveEpubFile(filePath+"vertical_"+fileName);
     linfo("end");
+    SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
 }
-HWND hwndCheckbox1, hwndCheckbox2, hwndCheckbox3, hwndButton,hwndInput,hwndButton2;
+
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -277,6 +295,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // 创建按钮
             hwndButton2 = CreateWindow("BUTTON", "...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 170, 10, 80, 30, hwnd, (HMENU)1, NULL, NULL);
+             hwndProgress = CreateWindowEx(
+                    0, // 扩展风格
+                    PROGRESS_CLASS, // 进度条类名
+                    "prosess:", // 文本内容
+                    WS_CHILD | WS_VISIBLE | PBS_SMOOTH, // 控件风格
+                    10, 200, 240, 30, // 控件位置和大小
+                    hwnd, // 父窗口句柄
+                    NULL, GetModuleHandle(NULL), NULL // 实例句柄等参数
+            );
+            SendMessage(hwndProgress, PBM_SETRANGE, 0, MAKELPARAM(0, 100)); // 设置进度条范围为 0 到 100
+            SendMessage(hwndProgress, PBM_SETSTEP, 1, 0); // 设置进度条步长为 1
 
             // 创建三个复选框和一个按钮
             hwndCheckbox1 = CreateWindow("BUTTON", "\xcc\xe6\xbb\xbb\xb1\xea\xb5\xe3\xb7\xfb\xba\xc5", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 40, 150, 30, hwnd, NULL, NULL, NULL);
@@ -284,7 +313,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             hwndCheckbox3 = CreateWindow("BUTTON", "Checkbox 3", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 10, 120, 150, 30, hwnd, NULL, NULL, NULL);
            /*start change button id:2*/
            hwndButton = CreateWindow("BUTTON", "\xbf\xaa\xca\xbc\xd7\xaa\xbb\xbb", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 160, 150, 30, hwnd, (HMENU)2, NULL, NULL);
-
+            hwndLabel = CreateWindow(
+                    "STATIC", // 静态文本控件类名
+                    "start", // 标签文本内容
+                    WS_CHILD | WS_VISIBLE, // 控件风格
+                    10, 230, 300, 20, // 控件位置和大小
+                    hwnd, // 父窗口句柄
+                    NULL, GetModuleHandle(NULL), NULL // 实例句柄等参数
+            );
+            SetWindowText(hwndLabel, Encoding::Utf8ToGbk("开始了").c_str()); // 设置标签文本
             break;
         }
         case WM_COMMAND: {
@@ -294,6 +331,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             if (HIWORD(wParam) == BN_CLICKED)
             {
+
+
 
                 if (HWND(wParam)==HWND(1))//file select button
                 {
@@ -308,7 +347,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     char *buffer = (char *)malloc(textLength + 1);
 
                     GetWindowText(hwndInput, buffer, textLength + 1);
-                    linfo("epub file name %s ",buffer);
+                    ldebug("epub file name %s ",buffer);
                     changeChar= SendMessage(hwndCheckbox1, BM_GETCHECK, 0, 0);
                     changeComplex= SendMessage(hwndCheckbox2, BM_GETCHECK, 0, 0);
                     ldebug("ischecked:%d",changeChar);
@@ -347,7 +386,7 @@ int main() {
     RegisterClass(&wc);
 
     // 创建主窗口
-    HWND hwnd = CreateWindow("MyWindowClass", "Window with Controls", WS_OVERLAPPEDWINDOW, 100, 100, 300, 250, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND hwnd = CreateWindow("MyWindowClass", "Window with Controls", WS_OVERLAPPEDWINDOW, 100, 100, 300, 290, NULL, NULL, GetModuleHandle(NULL), NULL);
 
     // 显示主窗口
     ShowWindow(hwnd, SW_SHOWDEFAULT);
