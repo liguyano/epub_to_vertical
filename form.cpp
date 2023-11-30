@@ -103,9 +103,10 @@ int changCofFile()
         }
     }
     auto cofFile =new TiXmlDocument;
-    cofFile->LoadFile((filePath+"/"+opfFile).c_str(),TIXML_ENCODING_UTF8);
+    cofFile->LoadFile((filePath+"temp\\"+opfFile).c_str(),TIXML_ENCODING_UTF8);
     if (cofFile->Error())
     {
+        lerro("when open %s",(filePath+"\\"+opfFile).c_str());
         lerror("%s",cofFile->ErrorDesc());
         return -1;
     }
