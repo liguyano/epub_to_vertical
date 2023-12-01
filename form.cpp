@@ -14,6 +14,8 @@ SNSTART("form_epub")
 #include <MyVectors.h>
 #include <encoding.h>
 #include <CommCtrl.h>
+#include <ToComplex.h>
+
 //#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
 static int progress =0;
 using namespace String;
@@ -131,15 +133,15 @@ void changeHtmlChar(std::string fileName) {
         if (changeChar) {
             line = replaceAllOccurrences(line, "\xe2\x80\x9c", "\xe3\x80\x8c");
             line = replaceAllOccurrences(line, "\xe2\x80\x9d", "\xe3\x80\x8d");
+            line = replaceAllOccurrences(line, "“", "「");
+            line = replaceAllOccurrences(line, "”", "」");
+        }
+        auto db=ComplexChinese::loadDate("D:\\OneDrive - jxstnu.edu.cn\\c++\\book\\epubToRight\\cmake-build-debug\\comGbk.txt");
+        if (changeComplex)
+        {
+            line=ComplexChinese::toComplex(db,Encoding::Utf8ToGbk(line.c_str()));
         }
         outHtmlFile << line END;
-    }
-    if (changeComplex)
-    {   std::ofstream pyFile;
-        pyFile.open("toComplex.py",std::ios::out);
-        pyFile<<"import sys\nimport zhconv\nif len(sys.argv) > 1:\n    outHtml=\"\"\n    with open(\"__temp.html\" ,encoding=\"utf-8\") as htmlFile:\n        for line in htmlFile:\n            line=zhconv.convert(line, 'zh-tw')\n            outHtml+=line+\"\\n\"\n    file=open(\"__temp.html\",\'w\',encoding=\"utf-8\")\n    file.write(outHtml)\nelse:\n    print(\"\xe6\x9c\xaa\xe6\x8f\x90\xe4\xbe\x9b\xe5\x91\xbd\xe4\xbb\xa4\xe8\xa1\x8c\xe5\x8f\x82\xe6\x95\xb0\")";    // 注册窗口类
-        pyFile.close();
-        system("py toComplex.py __temp.html");
     }
     if (copyFile("__temp.html",fileName.c_str()))
     {
@@ -151,7 +153,7 @@ void changeHtmlChar(std::string fileName) {
     htmlFile.close();
     outHtmlFile.close();
 
-}
+}//33 142
 stringVe getAllClasses()
 {
     stringVe allClasses;
@@ -164,7 +166,7 @@ stringVe getAllClasses()
             ldebug(s);
             auto htmlFile=new TiXmlDocument;
             SetWindowText(hwndLabel,("make complex:"+s).c_str());
-            SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)(iofs++*100/fs.size()), 0); // 设置进度条位置
+            SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)(iofs++*100/fs.size()*2), 0); // 设置进度条位置
             htmlFile->LoadFile((filePath+"temp\\"+s).c_str(),TIXML_ENCODING_UTF8);
             changeHtmlChar(filePath+"temp\\"+s);
             if (htmlFile->Error())

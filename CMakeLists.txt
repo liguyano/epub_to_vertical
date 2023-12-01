@@ -19,7 +19,8 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 add_executable( FORM form.cpp
         "${SELFHEAD}Logger.cpp"
         ${SELFHEAD}MyFile.cpp
-        unzip.cpp zip.cpp)
+        unzip.cpp zip.cpp
+        "${SELFHEAD}ToComplex.cpp")
 add_executable(StringTest testy/CHangeStringTest.cpp
         "${SELFHEAD}Logger.cpp")
 add_executable(FormatTest reFormate.cpp "${SELFHEAD}Logger.cpp")

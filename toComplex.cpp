@@ -11,13 +11,15 @@ using namespace ComplexChinese;
 int main()
 {
     system("chcp 65001");
-    auto allCOmplex=loadDate();
-    auto s=toComplex(allCOmplex,Encoding::Utf8ToGbk("About 特征的未来"));
+    auto allCOmplex=loadDate("./comGbk.txt");
+    //linfo(Encoding::Utf8ToGbk("About 特征的未来《》"));
+    auto s=toComplex(allCOmplex,Encoding::Utf8ToGbk("·"));
     linfo("%s",s.c_str());
     //system("chcp 65001");
 
-    printf_s("%c%c%c",allCOmplex[77][483],allCOmplex[77][484],allCOmplex[77][485]);
-    printf_s("%d\n",0xff-0x40);
+    printf_s("%c%c%c",allCOmplex[32][351],allCOmplex[32][352],allCOmplex[32][353]);
+    linfo("%d",allCOmplex[32][351]);
+    printf_s("\xe3\x80\x8a\xe3\x80\x8c《%d\n",0xff-0x40);
     return 0;
 
 }
