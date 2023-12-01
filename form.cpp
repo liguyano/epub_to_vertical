@@ -271,10 +271,12 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
 {
     auto name= getExtensionBeforLastDot(getExtensionAfterLastDot(fileName,'\\'));
     auto prex= getExtensionAfterLastDot(fileName);
+    copyFile(fileName.c_str(),("./__temp."+prex).c_str());
+    fileName=".\\__temp."+prex;
     if (prex!="epub")
     {
         SetWindowText(hwndLabel, "convert to epub"); // 设置标签文本
-        convertBook(getExtensionAfterLastDot(fileName,'\\').c_str(),(name+".epub").c_str());
+        convertBook(getExtensionAfterLastDot(fileName,'\\').c_str(),"__temp.epub");
         fileName=getExtensionBeforLastDot(fileName)+".epub";
     }
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)progress, 0); // 设置进度条位置
@@ -301,6 +303,16 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
     SetWindowText(hwndLabel,"output a azw3 file");
     convertBook("vertical_"+fileName, getExtensionBeforLastDot(fileName)+".azw3");
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
+    copyFile((getExtensionBeforLastDot(fileName)+".azw3").c_str(),(name+".azw3").c_str());
+    copyFile((getExtensionBeforLastDot(fileName)+".epub").c_str(),("vertical_"+name+".epub").c_str());
+    SetWindowText(hwndLabel,"delete temp  file");
+    linfo("delete temp  file");
+    remove("__temp.epub");
+    remove("vertical___temp.epub");
+    remove(("__temp."+prex).c_str());
+    remove("__temp.html");
+    remove("__temp.azw3");
+
 }
 
 
