@@ -15,15 +15,15 @@ unzip.cpp zip.cpp
 )
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-
+list(APPEND SOURCES ${SOURCES_DIR}/logo.rc)
 add_executable( FORM form.cpp
         "${SELFHEAD}Logger.cpp"
         ${SELFHEAD}MyFile.cpp
         unzip.cpp zip.cpp
-        "${SELFHEAD}ToComplex.cpp")
+        "${SELFHEAD}ToComplex.cpp" logo.rc)
 add_executable(StringTest testy/CHangeStringTest.cpp
         "${SELFHEAD}Logger.cpp")
-add_executable(FormatTest reFormate.cpp "${SELFHEAD}Logger.cpp")
+add_executable(FormatTest reFormate.cpp "${SELFHEAD}Logger.cpp" logo.rc)
 add_executable(TOcomplex toComplex.cpp "${SELFHEAD}Logger.cpp"
        "${SELFHEAD}ToComplex.cpp")
 target_link_libraries(epubToRight xmlt)

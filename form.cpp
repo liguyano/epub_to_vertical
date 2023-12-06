@@ -15,20 +15,53 @@ SNSTART("form_epub")
 #include <encoding.h>
 #include <CommCtrl.h>
 #include <ToComplex.h>
-
-//#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
+namespace fs = std::filesystem;
+#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
 static int progress =0;
+
 using namespace String;
 const static std::string makeItVertical="   writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;-webkit-writing-mode: vertical-rl;";
 HWND hwndCheckbox1, hwndCheckbox2, hwndCheckbox3, hwndButton,hwndInput,hwndButton2,hwndProgress, hwndLabel;
 const static std::string rtolString="page-progression-direction=\"rtl\"";
-static std::string filePath="";
+static std::string filePath="",caliPath="",complexDataPath="";
 static int changeChar,changeComplex=0;
 //unzip in the dir now , then copy it to the direction
+void inilize()
+{
+if(fs::exists("./optionOfEpubToRIght.xml"))
+{
+    auto optionDocument=new TiXmlDocument;
+    optionDocument->LoadFile("./optionOfEpubToRIght.xml");
+    if (optionDocument->Error())
+    {
+        lerro(" when %s %s","./optionOfEpubToRIght.xml",optionDocument->ErrorDesc());
+    }
+    auto option=optionDocument->FirstChildElement();
+    auto cpath=option->FirstChild("paths")->FirstChild("caliPath");
+    caliPath=cpath->FirstChild()->Value();
+    complexDataPath=option->FirstChild("paths")->FirstChild("ComplexDataPath")->FirstChild()->Value();
+    linfo("caliPath:%s" ,caliPath.c_str());
+    linfo("complexPath:%s",complexDataPath.c_str());
+    optionDocument->Clear();
+}else
+{
+    std::ofstream optionFile("./optionOfEpubToRIght.xml",std::ios::out);
+    optionFile<<"<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
+                "<option>\n"
+                "    <paths>\n"
+                "        <caliPath>D:\\Program Files\\Calibre2</caliPath>\n"
+                "        <ComplexDataPath>D:\\OneDrive - jxstnu.edu.cn\\c++\\book\\epubToRight\\cmake-build-debug\\comGbk.txt</ComplexDataPath>\n"
+                "    </paths>\n"
+                "   </option>";
+    optionFile.close();
+}
+
+}
+// convert ebook format
 void convertBook(std::string fileName,std::string tobe)
 {
-    system(("\"D:\\Program Files\\Calibre2\\ebook-convert.exe\" "+fileName+" "+tobe).c_str());
-    linfo("command""\"D:\\Program Files\\Calibre2\\ebook-convert.exe\" \""+fileName+"\" \""+tobe+"\"" );
+    system(("\""+caliPath+"\\ebook-convert.exe\" "+fileName+" "+tobe).c_str());
+    linfo("command""\""+caliPath+"\\ebook-convert.exe\" "+fileName+"\" \""+tobe+"\"" );
 }
 int unzipFile(std::string fileName,std::string outPutPath="temp")
 {
@@ -41,6 +74,7 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
         ldebug("ze.index:%d",numitems);
         createFolderIfNotExists(outPutPath);
         for (int i = 0; i < numitems; i++) {
+            SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)i*100/numitems, 0); // 设置进度条位置
             GetZipItem(hz, i, &ze);
             UnzipItem(hz, i, ze.name);
             //linfo(ze.name);
@@ -77,7 +111,7 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
             remove((filePath+ze.name).c_str());
         }
         //delete the not temp folder
-        for (auto s: needDeleteDir) {
+        for (const auto& s: needDeleteDir) {
             ldebug("delete "+s);
             deleteFolder(s);
         }
@@ -136,7 +170,7 @@ void changeHtmlChar(std::string fileName) {
             line = replaceAllOccurrences(line, "“", "「");
             line = replaceAllOccurrences(line, "”", "」");
         }
-        auto db=ComplexChinese::loadDate("D:\\OneDrive - jxstnu.edu.cn\\c++\\book\\epubToRight\\cmake-build-debug\\comGbk.txt");
+        auto db=ComplexChinese::loadDate(complexDataPath.c_str());
         if (changeComplex)
         {
             line=ComplexChinese::toComplex(db,Encoding::Utf8ToGbk(line.c_str()));
@@ -153,7 +187,7 @@ void changeHtmlChar(std::string fileName) {
     htmlFile.close();
     outHtmlFile.close();
 
-}//33 142
+}
 stringVe getAllClasses()
 {
     stringVe allClasses;
@@ -263,6 +297,7 @@ void saveEpubFile(std::string outFIleName)
     {ldebug(s);
         ZipAdd(epub,s.c_str(),(filePath+"temp/"+s).c_str());
     }
+
     CloseZip(epub);
     deleteFolder("temp");
     copyFile("temp.zip",outFIleName.c_str());
@@ -271,6 +306,7 @@ void saveEpubFile(std::string outFIleName)
 //main
 void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
 {
+    SetWindowText(hwndLabel, "start"); // 设置标签文本
     auto name= getExtensionBeforLastDot(getExtensionAfterLastDot(fileName,'\\'));
     auto prex= getExtensionAfterLastDot(fileName);
     copyFile(fileName.c_str(),("./__temp."+prex).c_str());
@@ -314,6 +350,8 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
     remove(("__temp."+prex).c_str());
     remove("__temp.html");
     remove("__temp.azw3");
+    SetWindowText(hwndLabel,"transForm end");
+    linfo("end");
 
 }
 
@@ -405,11 +443,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 int main() {
-    system("chcp 65001");
+    //system("chcp 65001");
+    inilize();
     std::ofstream pyFile;
-    pyFile.open("toComplex.py",std::ios::out);
-    pyFile<<"import sys\nimport zhconv\nif len(sys.argv) > 1:\n    outHtml=\"\"\n    with open(\"__temp.html\" ,encoding=\"utf-8\") as htmlFile:\n        for line in htmlFile:\n            line=zhconv.convert(line, 'zh-tw')\n            outHtml+=line+\"\\n\"\n    file=open(\"__temp.html\",\'w\',encoding=\"utf-8\")\n    file.write(outHtml)\nelse:\n    print(\"\xe6\x9c\xaa\xe6\x8f\x90\xe4\xbe\x9b\xe5\x91\xbd\xe4\xbb\xa4\xe8\xa1\x8c\xe5\x8f\x82\xe6\x95\xb0\")";    // 注册窗口类
-    pyFile.close();
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = WndProc;
     wc.hInstance =GetModuleHandle(NULL);
@@ -429,6 +465,6 @@ int main() {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    remove("toComplex.py");
+
     return 0;
 }
