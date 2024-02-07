@@ -16,7 +16,7 @@ SNSTART("form_epub")
 #include <CommCtrl.h>
 #include <ToComplex.h>
 namespace fs = std::filesystem;
-#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
+//#pragma comment(linker,"/subsystem:\"Windows\" /entry:\"mainCRTStartup\"")
 static int progress =0;
 
 using namespace String;
@@ -65,7 +65,7 @@ void convertBook(std::string fileName,std::string tobe)
 }
 int unzipFile(std::string fileName,std::string outPutPath="temp")
 {
-    try {
+    //try {
         stringVe needDeleteDir;
         HZIP hz = OpenZip(fileName.c_str(), 0);
         ZIPENTRY ze;
@@ -80,6 +80,7 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
             //linfo(ze.name);
             ldebug(std::string ("copying  ") +filePath+ze.name);
             //move file to the direction
+            linfo("ze.name :%s",ze.name);
             auto filePaths = String::split(ze.name, "/");
             std::string FIleName(ze.name);
             auto f=FIleName.find('/');
@@ -91,6 +92,8 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
                 std::string pathNow = "";
                 if (filePaths.size()==1)
                 {
+                    //it's a folder if size =1
+                    linfo(filePath+outPutPath+"/"+filePaths[0]);
                     createFolderIfNotExists(filePath+outPutPath+"/"+filePaths[0]);
                 }
                 for (int j = 0; j < filePaths.size() - 1; ++j) {
@@ -102,13 +105,16 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
                 }
 
             }
-            if (filePaths.size()==1 && (FIleName[FIleName.size()-1]=='/'))
-            {
+            if ((FIleName[FIleName.size()-1]=='/') || (FIleName[FIleName.size()-1]=='\\') )
+            {// if this one a file or a folder
                 continue;
+            }else
+            {
+                ldebug(filePath+outPutPath + "/" + ze.name);
+                copyFile((filePath+ze.name).c_str(), (filePath+outPutPath + "/" + ze.name).c_str());
+                remove((filePath+ze.name).c_str());
             }
-            ldebug(filePath+outPutPath + "/" + ze.name);
-            copyFile((filePath+ze.name).c_str(), (filePath+outPutPath + "/" + ze.name).c_str());
-            remove((filePath+ze.name).c_str());
+
         }
         //delete the not temp folder
         for (const auto& s: needDeleteDir) {
@@ -119,14 +125,21 @@ int unzipFile(std::string fileName,std::string outPutPath="temp")
 
         CloseZip(hz);
         return 1;
-    }
-    catch (const std::exception& e) {
+   // }
+/*    catch (const std::exception& e) {
         lerror("%s",e.what());
+        lerro("unzip file failed");
         return 0;
-    }
+    }*/
 }
 int changCofFile()
 {
+    if (folderExists(filePath+"temp/"))
+    {}
+    else
+    {
+        lerro("%stemp/ no exists",filePath.c_str() );
+    }
     auto files=GetFilesInFolder(filePath+"temp/");
     std::string opfFile="";
     for (auto ff:files)
@@ -169,6 +182,10 @@ void changeHtmlChar(std::string fileName) {
             line = replaceAllOccurrences(line, "\xe2\x80\x9d", "\xe3\x80\x8d");
             line = replaceAllOccurrences(line, "“", "「");
             line = replaceAllOccurrences(line, "”", "」");
+/*            line = replaceAllOccurrences(line, ",", "，");
+            *//*line = replaceAllOccurrences(line, ".", "。");*//*
+            line = replaceAllOccurrences(line, ":", "：");
+            *//*line = replaceAllOccurrences(line, ";", "；");*/
         }
         auto db=ComplexChinese::loadDate(complexDataPath.c_str());
         if (changeComplex)
@@ -201,13 +218,14 @@ stringVe getAllClasses()
             auto htmlFile=new TiXmlDocument;
             SetWindowText(hwndLabel,("make complex:"+s).c_str());
             SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)(iofs++*100/fs.size()*2), 0); // 设置进度条位置
+            linfo("load html file:%s",(filePath+"temp\\"+s).c_str());
             htmlFile->LoadFile((filePath+"temp\\"+s).c_str(),TIXML_ENCODING_UTF8);
-            changeHtmlChar(filePath+"temp\\"+s);
             if (htmlFile->Error())
             {
-                lerror("%s",htmlFile->ErrorDesc());
-                throw "erro";
+                lerror("%s",htmlFile->ErrorDesc());//throw "erro";
+                continue;
             }
+            changeHtmlChar(filePath+"temp\\"+s);
             auto html=htmlFile->FirstChildElement();
             ldebug(html->Value());
             auto body=html->FirstChildElement("body");
@@ -325,6 +343,7 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
     SetWindowText(hwndLabel,"unzip epub file");
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)0, 0); // 设置进度条位置
     unzipFile(filePath+fileName);
+    ldebug("unzip succed");
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
     linfo("change the spine");
     SetWindowText(hwndLabel,"change .cof file");
@@ -342,7 +361,7 @@ void StartCOnvert(std::string fileName,int repalceThchar,int replaceTheComplex)
     convertBook("vertical_"+fileName, getExtensionBeforLastDot(fileName)+".azw3");
     SendMessage(hwndProgress, PBM_SETPOS, (WPARAM)100, 0); // 设置进度条位置
     copyFile((getExtensionBeforLastDot(fileName)+".azw3").c_str(),(name+".azw3").c_str());
-    copyFile((getExtensionBeforLastDot(fileName)+".epub").c_str(),("vertical_"+name+".epub").c_str());
+    copyFile("vertical___temp.epub",("vertical_"+name+".epub").c_str());
     SetWindowText(hwndLabel,"delete temp  file");
     linfo("delete temp  file");
     remove("__temp.epub");
@@ -443,7 +462,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 int main() {
-    //system("chcp 65001");
+    system("chcp 65001");
+   // linfo("%s exsist" , folderExists(".\\temp/蟺茅鈹傁�芒鈹傁�芒脝蟺茅脰蟺芒茂危鈺戔晳螛没么 by 碌楼忙蟿枚鈻懧碘枔脰桅脟鈺⑽樎�脰 [碌楼忙蟿枚鈻懧碘枔脰桅脟鈺⑽樎�脰] (z-lib.org)")?"存在":"不存在");
     inilize();
     std::ofstream pyFile;
     WNDCLASS wc = { 0 };
